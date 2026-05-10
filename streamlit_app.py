@@ -338,10 +338,19 @@ def build_features():
         "ambul_handover_stress": ambul * int(hov),
         "is_winter": int(winter),
         "boarding_per_los": board_e / (los_e + 1),
+        "deteriorated_in_ed": 1 if news2 >= 7 else 0,
+        "admitted": 1 if (avg_p_est > 0.6 and triage <= 2) else 0,
     }
-    return pd.DataFrame([feat])[meta["feature_names"]]
+    # Only keep columns that exist in feature_names
+    available = {k: v for k, v in feat.items() if k in meta["feature_names"]}
+    df = pd.DataFrame([feat])
+    for col in meta["feature_names"]:
+        if col not in df.columns:
+            df[col] = 0
+    return df[meta["feature_names"]]
 
 
+avg_p_est = 0.5 if bed_occ > 93 else 0.3
 feat_df = build_features()
 lgb_p   = lgb_m.predict_proba(feat_df)[0, 1]
 xgb_p   = xgb_m.predict_proba(feat_df)[0, 1]
@@ -811,3 +820,5 @@ st.markdown(f"""
   For research and demonstration purposes only. Not for clinical use.
 </div>
 """, unsafe_allow_html=True)
+
+
