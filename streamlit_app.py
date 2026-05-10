@@ -240,10 +240,13 @@ st.markdown(f"""
 @st.cache_resource
 def load_models():
     try:
-        lgb_m  = pickle.load(open("lgb_model.pkl",  "rb"))
-        xgb_m  = pickle.load(open("xgb_model.pkl",  "rb"))
-        scaler = pickle.load(open("scaler.pkl",      "rb"))
+        xgb_m  = pickle.load(open("xgb_model.pkl", "rb"))
+        scaler = pickle.load(open("scaler.pkl",     "rb"))
         meta   = json.load(open("feature_meta.json"))
+        try:
+            lgb_m = pickle.load(open("lgb_model.pkl", "rb"))
+        except Exception:
+            lgb_m = None
         return lgb_m, xgb_m, scaler, meta, None
     except FileNotFoundError as e:
         return None, None, None, None, str(e)
@@ -352,8 +355,14 @@ def build_features():
 
 avg_p_est = 0.5 if bed_occ > 93 else 0.3
 feat_df = build_features()
-lgb_p   = lgb_m.predict_proba(feat_df)[0, 1]
 xgb_p   = xgb_m.predict_proba(feat_df)[0, 1]
+if lgb_m is not None:
+    try:
+        lgb_p = lgb_m.predict_proba(feat_df)[0, 1]
+    except Exception:
+        lgb_p = xgb_p
+else:
+    lgb_p = xgb_p
 avg_p   = (lgb_p + xgb_p) / 2
 
 # Risk tier
